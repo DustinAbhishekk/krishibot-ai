@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KrishiBot - Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+          theme: {
+            extend: {},
+          },
+          plugins: [tailwindTypography],
+        }
+      </script>
+      <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+      
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      .chat-container {
+        height: calc(100vh - 160px);
+      }
+      .message-animation {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .typing-indicator span {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #16a34a;
+        margin: 0 2px;
+        animation: bounce 1.4s infinite ease-in-out;
+      }
+      .typing-indicator span:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+      .typing-indicator span:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+      @keyframes bounce {
+        0%,
+        60%,
+        100% {
+          transform: translateY(0);
+        }
+        30% {
+          transform: translateY(-5px);
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 font-sans antialiased">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+      <div
+        class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center"
+      >
+        <div class="flex items-center space-x-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-8 w-8 text-green-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+            />
+          </svg>
+          <span class="text-xl font-semibold text-green-700">KrishiBot</span>
+        </div>
+        <a
+          href="index.html"
+          class="text-gray-600 hover:text-green-600 transition"
+          >Back to Home</a
+        >
+      </div>
+    </nav>
+
+    <!-- Chat Container -->
+    <div class="max-w-4xl mx-auto px-4 py-6">
+      <!-- Chat Header -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex items-center space-x-4">
+          <div class="bg-green-100 p-3 rounded-full">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-8 w-8 text-green-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold text-gray-800">
+              KrishiBot Assistant
+            </h1>
+            <p class="text-gray-600">
+              Ask me anything about farming, crops, or agriculture
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Messages -->
+      <div
+        class="chat-container overflow-y-auto mb-6 bg-white rounded-lg shadow-md p-6"
+      >
+        <div id="chat-messages" class="space-y-4">
+          <!-- Initial bot message -->
+          <div class="message-animation flex items-start space-x-3">
+            <div class="flex-shrink-0 bg-green-100 p-2 rounded-full">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
+              </svg>
+            </div>
+            <div class="bg-green-50 rounded-lg p-4 max-w-3xl">
+              <p class="text-gray-800">
+                Hello! I'm KrishiBot, your smart farming assistant. How can I
+                help you today? You can ask me about:
+              </p>
+              <ul class="list-disc pl-5 mt-2 space-y-1 text-gray-700">
+                <li>Crop selection and planting advice</li>
+                <li>Pest and disease identification</li>
+                <li>Weather-based farming tips</li>
+                <li>Soil management techniques</li>
+                <li>Organic farming practices</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Typing indicator (hidden by default) -->
+          <div id="typing-indicator" class="hidden flex items-start space-x-3">
+            <div class="flex-shrink-0 bg-green-100 p-2 rounded-full">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5 text-green-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
+              </svg>
+            </div>
+            <div class="typing-indicator bg-green-50 rounded-lg p-4">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Input -->
+      <div class="bg-white rounded-lg shadow-md p-4">
+        <form id="chat-form" class="flex space-x-3">
+          <input
+            type="text"
+            id="user-input"
+            placeholder="Type your farming question here..."
+            class="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            autocomplete="off"
+          />
+          <button
+            type="submit"
+            class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition shadow-md hover:shadow-lg flex items-center"
+          >
+            <span>Send</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5 ml-1"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 5l7 7-7 7M5 5l7 7-7 7"
+              />
+            </svg>
+          </button>
+        </form>
+        <div class="mt-3 text-xs text-gray-500 flex flex-wrap gap-2">
+          <span class="bg-gray-100 px-2 py-1 rounded"
+            >Try: "Best crops for red soil"</span
+          >
+          <span class="bg-gray-100 px-2 py-1 rounded"
+            >"How to treat leaf rust?"</span
+          >
+          <span class="bg-gray-100 px-2 py-1 rounded"
+            >"Organic pest control for tomatoes"</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+          const chatForm = document.getElementById("chat-form");
+          const userInput = document.getElementById("user-input");
+          const chatMessages = document.getElementById("chat-messages");
+          const typingIndicator = document.getElementById("typing-indicator");
+      
+          async function sendMessageToAI(message) {
+            typingIndicator.classList.remove("hidden");
+      
+            try {
+              const response = await fetch("http://127.0.0.1:5000/api/chat", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ message }),
+              });
+      
+              const data = await response.json();
+              return data.reply;
+            } catch (error) {
+              console.error("Error communicating with backend:", error);
+              return "❌ Sorry, I couldn’t connect to KrishiBot’s brain right now.";
+            } finally {
+              typingIndicator.classList.add("hidden");
+            }
+          }
+      
+          function addMessageToChat(sender, message) {
+            const messageDiv = document.createElement("div");
+            messageDiv.classList.add(
+              "message-animation",
+              "flex",
+              "items-start",
+              "space-x-3"
+            );
+      
+            const parsedMessage = typeof marked !== "undefined"
+              ? marked.parse(message)
+              : `<p>${message.replace(/\n/g, "<br>")}</p>`;
+      
+            if (sender === "user") {
+              messageDiv.innerHTML = `
+                <div class="flex-shrink-0 bg-blue-100 p-2 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-4 max-w-3xl prose prose-sm max-w-none text-gray-800">
+                  ${parsedMessage}
+                </div>
+              `;
+            } else {
+              messageDiv.innerHTML = `
+                <div class="flex-shrink-0 bg-green-100 p-2 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div class="bg-green-50 rounded-lg p-4 max-w-3xl prose prose-base prose-green leading-relaxed text-gray-800">
+  ${marked.parse(message)}
+</div>
+
+              `;
+            }
+      
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+          }
+      
+          chatForm.addEventListener("submit", async function (e) {
+            e.preventDefault();
+            const message = userInput.value.trim();
+      
+            if (message) {
+              addMessageToChat("user", message);
+              userInput.value = "";
+      
+              const aiResponse = await sendMessageToAI(message);
+              addMessageToChat("bot", aiResponse);
+            }
+          });
+      
+          userInput.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              chatForm.dispatchEvent(new Event("submit"));
+            }
+          });
+        });
+      </script>
+      
+  </body>
+</html>
