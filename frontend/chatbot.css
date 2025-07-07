@@ -1,0 +1,96 @@
+
+    .chat-container {
+      height: 500px;
+      transition: all 0.3s ease;
+    }
+    .chat-messages {
+      height: calc(100% - 100px);
+      overflow-y: auto;
+    }
+    .message-animation {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    .typing-indicator span {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #16a34a;
+      margin: 0 2px;
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+    .typing-indicator span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+    .typing-indicator span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-5px); }
+    }
+    .chat-window {
+      transform: scale(0);
+      transform-origin: bottom right;
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+    .chat-window.active {
+      transform: scale(1);
+      opacity: 1;
+    }
+    .hindi-font {
+      font-family: 'Hind', sans-serif;
+    }
+    .quick-reply {
+      transition: all 0.2s ease;
+    }
+    .quick-reply:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .language-option.active {
+      background-color: #16a34a;
+      color: white;
+    }
+    /* Hide scrollbar but allow scrolling */
+    .chat-messages::-webkit-scrollbar {
+      display: none;
+    }
+    .chat-messages {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .quick-reply.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .markdown-content h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+      margin-bottom: 0.25rem;
+      color: #166534;
+    }
+    .markdown-content strong {
+      font-weight: 600;
+    }
+    .markdown-content ul {
+      list-style-type: none;
+      padding-left: 0;
+    }
+    .markdown-content li {
+      position: relative;
+      padding-left: 1.25rem;
+      margin-bottom: 0.25rem;
+    }
+    .markdown-content li:before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #16a34a;
+    }

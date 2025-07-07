@@ -1,0 +1,101 @@
+
+  <!-- Floating Chatbot Container -->
+  <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end space-y-3">
+    <!-- Chat Window -->
+    <div id="chat-window" class="chat-window bg-white rounded-xl shadow-2xl overflow-hidden w-full max-w-md border border-gray-200">
+      <!-- Chat Header -->
+      <div class="bg-gradient-to-r from-green-600 to-green-700 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <div class="relative">
+            <div class="absolute -inset-1 bg-green-400 rounded-full blur opacity-75 animate-pulse"></div>
+            <div class="relative bg-white p-1 rounded-full">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+            </div>
+          </div>
+          <span class="text-white font-medium">KrishiBot Assistant</span>
+        </div>
+        <div class="flex items-center space-x-3">
+          <!-- Connection Status -->
+          <div id="connection-status" class="flex items-center text-xs hidden">
+            <span class="w-2 h-2 rounded-full mr-1 bg-gray-400"></span>
+            <span class="english-text">Connecting...</span>
+            <span class="hindi-text hidden">कनेक्ट हो रहा है...</span>
+          </div>
+          <!-- Language Selector -->
+          <div class="flex bg-green-800 bg-opacity-30 rounded-full p-1">
+            <button data-lang="en" class="language-option active text-xs px-2 py-1 rounded-full">EN</button>
+            <button data-lang="hi" class="language-option text-xs px-2 py-1 rounded-full">हिंदी</button>
+          </div>
+          <button id="minimize-chat" class="text-white hover:text-green-200 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Chat Messages -->
+      <div class="chat-container">
+        <div id="chat-messages" class="chat-messages p-4 space-y-3">
+          <!-- Typing Indicator -->
+          <div id="typing-indicator" class="hidden flex items-start space-x-2 my-2">
+            <div class="flex-shrink-0 bg-green-100 p-2 rounded-full">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div class="bg-green-50 rounded-lg p-3">
+              <div class="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Chat Input -->
+        <div class="border-t border-gray-200 p-3 bg-gray-50">
+          <form id="chat-form" class="flex space-x-2">
+            <input 
+              type="text" 
+              id="user-input" 
+              placeholder="Type your message..." 
+              class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              autocomplete="off"
+            >
+            <button 
+              type="submit" 
+              class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition shadow-sm hover:shadow-md flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </button>
+          </form>
+          <div class="mt-2 flex justify-between items-center">
+            <div class="text-xs text-gray-500">
+              <span class="english-text">Ask about crops, pests, or schemes</span>
+              <span class="hindi-text hidden">फसलों, कीटों या योजनाओं के बारे में पूछें</span>
+            </div>
+            <button id="voice-btn" class="text-gray-500 hover:text-green-600">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Floating Chat Button -->
+    <button id="chat-button" class="relative bg-gradient-to-br from-green-600 to-green-700 text-white p-4 rounded-full shadow-xl transition-all hover:shadow-2xl hover:scale-105 flex items-center justify-center">
+      <div class="absolute -inset-1 bg-green-400 rounded-full blur opacity-75 animate-pulse"></div>
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+      </svg>
+      <span id="notification-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-bounce hidden">1</span>
+    </button>
+  </div>
