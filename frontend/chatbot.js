@@ -19,13 +19,13 @@ document.addEventListener("DOMContentLoaded", function () {
   let conversationHistory = [];
   let isProcessing = false;
   let lastRequestTime = 0;
-  let eventSource = null;
+  let currentBotMessageId = null;
 
   // Initialize chat
   function initChat() {
     loadConversation();
-    setupEventListeners();
 
+    // Set initial chat state
     const chatState = localStorage.getItem("chatState");
     if (chatState === "closed") {
       chatWindow.classList.remove("active");
@@ -44,49 +44,45 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Setup event listeners
+  // Event Listeners
   function setupEventListeners() {
     chatButton.addEventListener("click", toggleChat);
     minimizeButton.addEventListener("click", minimizeChat);
+    chatForm.addEventListener("submit", handleFormSubmit);
+    userInput.addEventListener("keydown", handleKeyDown);
 
     if (clearHistoryBtn) {
       clearHistoryBtn.addEventListener("click", clearChatHistory);
     }
 
-    languageOptions.forEach((option) => {
-      option.addEventListener("click", handleLanguageChange);
-    });
-
     if (voiceBtn) {
       voiceBtn.addEventListener("click", handleVoiceInput);
     }
 
-    chatForm.addEventListener("submit", handleFormSubmit);
-    userInput.addEventListener("keydown", handleKeyDown);
-
-    document.addEventListener("click", function (e) {
-      if (e.target.classList.contains("quick-reply")) {
-        handleQuickReply(e.target);
-      }
+    languageOptions.forEach((option) => {
+      option.addEventListener("click", handleLanguageChange);
     });
   }
 
-  // Toggle chat visibility
+  // Toggle chat visibility (fixed version)
   function toggleChat(e) {
     e.preventDefault();
-    chatWindow.classList.toggle("active");
-    chatButton.classList.toggle("hidden");
+    isChatOpen = !chatWindow.classList.contains("active");
 
-    if (chatWindow.classList.contains("active")) {
-      localStorage.setItem("chatState", "open");
+    if (isChatOpen) {
+      chatWindow.classList.add("active");
+      chatButton.classList.add("hidden");
       unreadMessages = 0;
       updateNotificationBadge();
+      localStorage.setItem("chatState", "open");
     } else {
+      chatWindow.classList.remove("active");
+      chatButton.classList.remove("hidden");
       localStorage.setItem("chatState", "closed");
     }
   }
 
-  // Minimize chat
+  // Minimize chat (fixed version)
   function minimizeChat(e) {
     e.preventDefault();
     chatWindow.classList.remove("active");
@@ -94,21 +90,21 @@ document.addEventListener("DOMContentLoaded", function () {
     localStorage.setItem("chatState", "closed");
   }
 
-  // Show welcome message
+  // Show welcome message with premium formatting
   function showWelcomeMessage() {
     const welcomeMessage =
       currentLanguage === "en"
-        ? "Hello! I'm KrishiBot, your smart farming assistant. How can I help you today?"
-        : "नमस्ते! मैं कृषि बॉट हूँ, आपका स्मार्ट कृषि सहायक। मैं आपकी कैसे मदद कर सकता हूँ?";
+        ? `**Welcome to KrishiBot!** 🌱\n\n## How can I help you today?\n- ✨ Crop advice\n- ✨ Pest identification\n- 🌦️ Weather forecasts\n- 📜 Government schemes\n\nTip: You can ask in English or हिंदी!`
+        : `**कृषि बॉट में आपका स्वागत है!** 🌱\n\n## मैं आपकी कैसे मदद कर सकता हूँ?\n- ✨ फसल सलाह\n- ✨ कीट पहचान\n- 🌦️ मौसम पूर्वानुमान\n- 📜 सरकारी योजनाएं\n\nटिप: आप अंग्रेजी या हिंदी में पूछ सकते हैं!`;
 
     addMessage("bot", welcomeMessage);
     showQuickReplies();
   }
 
-  // Replay previous conversation
+  // Replay conversation history
   function replayConversation() {
     conversationHistory.forEach((msg) => {
-      addMessage(msg.role === "user" ? "user" : "bot", msg.content);
+      addMessage(msg.role === "user" ? "user" : "bot", msg.content, false);
     });
   }
 
@@ -148,32 +144,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Detect language from text
-  function detectLanguage(text) {
-    const hindiRegex = /[\u0900-\u097F]/;
-    return hindiRegex.test(text) ? "hi" : "en";
-  }
-
-  // Update language UI
-  function updateLanguageUI(lang) {
-    // Update active language button
-    languageOptions.forEach((opt) => {
-      opt.classList.toggle("active", opt.dataset.lang === lang);
-    });
-
-    // Update text visibility
-    document.querySelectorAll(".english-text").forEach((el) => {
-      el.classList.toggle("hidden", lang !== "en");
-    });
-    document.querySelectorAll(".hindi-text").forEach((el) => {
-      el.classList.toggle("hidden", lang !== "hi");
-    });
-
-    // Update placeholder text
-    userInput.placeholder =
-      lang === "en" ? "Type your message..." : "अपना संदेश टाइप करें...";
-  }
-
   // Handle language change
   function handleLanguageChange() {
     currentLanguage = this.dataset.lang;
@@ -191,6 +161,28 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       showQuickReplies();
     }
+  }
+
+  // Update language UI
+  function updateLanguageUI(lang) {
+    // Update active language button
+    languageOptions.forEach((opt) => {
+      opt.classList.toggle("active", opt.dataset.lang === lang);
+      opt.classList.toggle("bg-white", opt.dataset.lang === lang);
+      opt.classList.toggle("text-green-700", opt.dataset.lang === lang);
+    });
+
+    // Update text visibility
+    document.querySelectorAll(".english-text").forEach((el) => {
+      el.classList.toggle("hidden", lang !== "en");
+    });
+    document.querySelectorAll(".hindi-text").forEach((el) => {
+      el.classList.toggle("hidden", lang !== "hi");
+    });
+
+    // Update placeholder text
+    userInput.placeholder =
+      lang === "en" ? "Type your message..." : "अपना संदेश टाइप करें...";
   }
 
   // Show quick reply suggestions
@@ -227,10 +219,20 @@ document.addEventListener("DOMContentLoaded", function () {
     quickReplies.forEach((reply) => {
       const button = document.createElement("button");
       button.className =
-        "quick-reply text-xs bg-white border border-green-200 text-green-700 px-2 py-1 rounded-full hover:bg-green-50";
+        "quick-reply text-xs bg-white border border-green-200 text-green-700 px-2 py-1 rounded-full hover:bg-green-50 transition-colors";
       if (currentLanguage === "hi") button.classList.add("hindi-font");
       button.textContent = reply;
-      button.addEventListener("click", () => handleQuickReply(button));
+      button.addEventListener("click", function () {
+        if (!isProcessing) {
+          userInput.value = reply;
+          chatForm.dispatchEvent(new Event("submit"));
+          // Disable quick replies during processing
+          document.querySelectorAll(".quick-reply").forEach((btn) => {
+            btn.disabled = true;
+            btn.classList.add("opacity-50");
+          });
+        }
+      });
       buttonsDiv.appendChild(button);
     });
 
@@ -250,21 +252,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Handle quick reply click
-  function handleQuickReply(button) {
-    if (!isProcessing && !button.classList.contains("disabled")) {
-      userInput.value = button.textContent;
-      chatForm.dispatchEvent(new Event("submit"));
-
-      // Disable all quick replies during processing
-      document.querySelectorAll(".quick-reply").forEach((btn) => {
-        btn.disabled = true;
-        btn.classList.add("disabled");
-      });
-    }
-  }
-
-  // Handle voice input button
+  // Handle voice input
   function handleVoiceInput(e) {
     e.preventDefault();
     addMessage(
@@ -275,28 +263,136 @@ document.addEventListener("DOMContentLoaded", function () {
     );
   }
 
-  // Process markdown content
-  function processMarkdown(text) {
-    // Process bold text
-    text = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  // Format message with premium styling
+  // Format message with premium styling
+  // In your formatMessage() function, replace with this:
+function formatMessage(text) {
+  // 1. Convert headings with timestamp (strict check for first line)
+  if (!text.startsWith("**")) {
+    const firstNewline = text.indexOf("\n");
+    const firstLine =
+      firstNewline === -1 ? text : text.substring(0, firstNewline);
+    text = `**${firstLine.trim()}** (${new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    })})\n\n${text}`;
+  }
 
-    // Process headings
-    text = text.replace(
-      /##\s(.*?)(\n|$)/g,
-      '<h3 class="mt-2 font-semibold text-green-800">$1</h3>'
-    );
+  text = text.replace(
+    /\*\*(.*?)\s*\((.*?)\)\*\*/g,
+    `<h2 class="text-green-700 font-bold mb-4">
+      $1
+      <span class="text-gray-500 font-normal ml-2">$2</span>
+    </h2>`
+  );
 
-    // Process bullet points
-    text = text.replace(/-\s(.*?)(\n|$)/g, "<li>$1</li>");
-    text = text.replace(
-      /(<li>.*?<\/li>)+/g,
-      '<ul class="list-disc pl-5">$&</ul>'
-    );
+  // 2. Section headers (flexible detection)
+  text = text.replace(
+    /^#{2}\s*(.*)|^(?=\S)(.*?)(?=\n|$)/gm,
+    (match, p1, p2) => {
+      const content = p1 || p2;
+      if (!content) return match;
 
-    // Process line breaks
-    text = text.replace(/\n/g, "<br>");
+      // Detect if line should be a header (contains emoji or keywords)
+      const isHeader =
+        /[\p{Emoji}]|management|control|techniques|pest|soil|water/i.test(
+          content
+        );
+      if (!isHeader) return match;
 
-    return text;
+      const [emoji = "🌱", ...titleParts] = content.trim().split(/\s+/);
+      const title = titleParts.join(" ");
+      return `
+    <h3 class="font-semibold  mt-6 mb-3 flex items-center gap-2">
+      <span>${emoji}</span>
+      <span>${title}</span>
+    </h3>`;
+    }
+  );
+
+  // 3. Numbered points: 1. **Title** *desc*
+  text = text.replace(
+    /(\d+\.)\s*\*\*(.*?)\*\*\s*(\n\s*\*|\*)(.*?)(?=\n|$)/g,
+    `<div class="mb-4">
+      <div class="flex items-baseline gap-2">
+        <span class="font-medium">$1</span>
+        <h4 class="font-semibold">$2</h4>
+      </div>
+      <p class="text-gray-800 pl-6 mt-1">
+        <span class="text-gray-600">*</span>$4
+      </p>
+    </div>`
+  );
+
+  // 4. Bullet points (strict formatting)
+  text = text.replace(
+    /-\s*✨\s*\*\*(.*?)\*\*\s*(\n\s*\*|\*)(.*?)(?=\n|$)/g,
+    `<li class="flex items-start py-1.5">
+      <span class="mr-2 mt-1">•</span>
+      <div class="flex-1">
+        <span class="font-semibold">$1</span>
+        <p class="text-gray-800 mt-1">
+          <span class="text-gray-600">*</span>$3
+        </p>
+      </div>
+    </li>`
+  );
+
+  // 5. Tip formatting (catch all variants)
+  text = text.replace(
+    /(Tip|Regional Tip|Additional Tip|💡 Pro Tip|💡 विशेषज्ञ सलाह)[:：]\s*(.*?)(?=\n\n|\n$|$)/gi,
+    `<div class="bg-gray-50 border-l-4 border-gray-300 p-3 my-4 rounded-r">
+      <div class="flex items-start gap-3">
+        <span class="text-gray-600 mt-0.5">💡</span>
+        <div>
+          <p class="font-medium text-gray-800 mb-1">${
+            currentLanguage === "en" ? "Tip" : "सलाह"
+          }</p>
+          <p class="text-gray-800">$2</p>
+        </div>
+      </div>
+    </div>`
+  );
+
+  // 6. Wrap bullet lists
+  text = text.replace(
+    /(<li.*?<\/li>)+/gs,
+    `<ul class="list-none space-y-2 my-3">$&</ul>`
+  );
+
+  // 7. Horizontal rules
+  text = text.replace(
+    /---+/g,
+    `<div class="border-t border-gray-200 my-4 w-full"></div>`
+  );
+
+  // 8. Final formatting
+  text = text.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  text = text.replace(/\*(.*?)\*/g, "<em>$1</em>");
+  text = text.replace(/\n\n+/g, "</div><div class='mt-3'>");
+  text = text.replace(/\n/g, "<br>");
+
+  return `<div class="agricultural-response">${text}</div>`;
+}
+
+
+  // Get appropriate emoji for section
+  function getSectionEmoji(sectionTitle) {
+    const lowerTitle = sectionTitle.toLowerCase();
+    if (lowerTitle.includes("pest") || lowerTitle.includes("insect"))
+      return "🐛";
+    if (lowerTitle.includes("weather") || lowerTitle.includes("rain"))
+      return "⛅";
+    if (lowerTitle.includes("soil") || lowerTitle.includes("land")) return "🌱";
+    if (lowerTitle.includes("water") || lowerTitle.includes("irrigation"))
+      return "💧";
+    if (lowerTitle.includes("scheme") || lowerTitle.includes("government"))
+      return "🏛️";
+    if (lowerTitle.includes("organic") || lowerTitle.includes("natural"))
+      return "🌿";
+    if (lowerTitle.includes("yield") || lowerTitle.includes("production"))
+      return "📈";
+    return "ℹ️";
   }
 
   // Get AI response from backend
@@ -322,30 +418,26 @@ document.addEventListener("DOMContentLoaded", function () {
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
     // Create bot message container
+    currentBotMessageId = "msg-" + Date.now();
     const botDiv = document.createElement("div");
-    botDiv.classList.add(
-      "flex",
-      "items-start",
-      "space-x-2",
-      "message-animation"
-    );
+    botDiv.id = currentBotMessageId;
+    botDiv.className = "flex items-start space-x-2 message-animation";
 
     botDiv.innerHTML = `
-      <div class="flex-shrink-0 bg-green-100 p-2 rounded-full">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-      </div>
-      <div class="bg-green-50 rounded-lg p-3 max-w-xs md:max-w-md markdown-content">
-        <div class="text-gray-800 text-sm" id="streaming-content"></div>
-        <p class="text-right text-xs text-gray-500 mt-1">${new Date().toLocaleTimeString(
-          [],
-          { hour: "2-digit", minute: "2-digit" }
-        )}</p>
-      </div>
+        <div class="flex-shrink-0 bg-green-100 p-2 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+        </div>
+        <div class="bg-green-50 rounded-lg p-3 max-w-xs md:max-w-md lg:max-w-lg w-full">
+            <div class="text-gray-800 text-sm" id="${currentBotMessageId}-content"></div>
+            <p class="text-right text-xs text-gray-500 mt-2">${new Date().toLocaleTimeString(
+              [],
+              { hour: "2-digit", minute: "2-digit" }
+            )}</p>
+        </div>
     `;
 
-    const streamingContent = botDiv.querySelector("#streaming-content");
     chatMessages.appendChild(botDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -363,19 +455,21 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       if (!response.ok) {
-        throw new Error("Network response was not ok");
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
+      let buffer = "";
       let fullResponse = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n");
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop(); // Save incomplete line for next iteration
 
         for (const line of lines) {
           if (line.startsWith("data: ")) {
@@ -383,8 +477,19 @@ document.addEventListener("DOMContentLoaded", function () {
               const data = JSON.parse(line.substring(6));
               if (data.chunk) {
                 fullResponse += data.chunk;
-                streamingContent.innerHTML = processMarkdown(fullResponse);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+                const contentDiv = document.getElementById(
+                  `${currentBotMessageId}-content`
+                );
+                if (contentDiv) {
+                  contentDiv.innerHTML = formatMessage(fullResponse);
+                  // Auto-scroll only if user hasn't manually scrolled up
+                  const isNearBottom =
+                    chatMessages.scrollHeight - chatMessages.clientHeight <=
+                    chatMessages.scrollTop + 100;
+                  if (isNearBottom) {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                  }
+                }
               }
             } catch (e) {
               console.error("Error parsing SSE data:", e);
@@ -399,20 +504,39 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     } catch (error) {
       console.error("Error in streaming:", error);
-      streamingContent.innerHTML =
-        currentLanguage === "en"
-          ? "Sorry, something went wrong. Please try again."
-          : "क्षमा करें, कुछ गलत हो गया। कृपया पुनः प्रयास करें।";
+      const errorContent = document.getElementById(
+        `${currentBotMessageId}-content`
+      );
+      if (errorContent) {
+        errorContent.innerHTML = `
+                <div class="bg-red-50 border-l-4 border-red-400 p-3 rounded-r">
+                    <p class="text-red-700">
+                        ${
+                          currentLanguage === "en"
+                            ? "Sorry, we encountered an error. Please try again."
+                            : "क्षमा करें, एक त्रुटि हुई। कृपया पुनः प्रयास करें।"
+                        }
+                    </p>
+                </div>
+            `;
+      }
     } finally {
       typingIndicator.classList.add("hidden");
       connectionStatus.classList.add("hidden");
       isProcessing = false;
+      currentBotMessageId = null;
       showQuickReplies();
+
+      // Show notification if chat is closed
+      if (!chatWindow.classList.contains("active")) {
+        unreadMessages++;
+        updateNotificationBadge();
+      }
     }
   }
 
   // Add message to chat
-  function addMessage(sender, message) {
+  function addMessage(sender, message, saveToHistory = true) {
     // Check if this is a duplicate of the last message
     const lastMessage = chatMessages.lastElementChild;
     if (lastMessage && lastMessage !== typingIndicator) {
@@ -424,12 +548,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     const messageDiv = document.createElement("div");
-    messageDiv.classList.add(
-      "flex",
-      "items-start",
-      "space-x-2",
-      "message-animation"
-    );
+    messageDiv.className = `flex items-start space-x-2 ${
+      sender === "user" ? "justify-end" : ""
+    } message-animation`;
 
     const timestamp = new Date().toLocaleTimeString([], {
       hour: "2-digit",
@@ -438,14 +559,16 @@ document.addEventListener("DOMContentLoaded", function () {
 
     if (sender === "user") {
       messageDiv.innerHTML = `
-        <div class="flex-shrink-0 bg-blue-100 p-2 rounded-full">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        </div>
-        <div class="bg-blue-50 rounded-lg p-3 max-w-xs md:max-w-md">
-          <p class="text-gray-800 text-sm">${message}</p>
-          <p class="text-right text-xs text-gray-500 mt-1">${timestamp}</p>
+        <div class="flex items-end space-x-2">
+          <div class="bg-blue-100 text-blue-800 rounded-lg p-3 max-w-xs md:max-w-md">
+            <p class="text-sm">${message}</p>
+            <p class="text-right text-xs text-gray-500 mt-1">${timestamp}</p>
+          </div>
+          <div class="flex-shrink-0 bg-blue-600 p-2 rounded-full text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
         </div>
       `;
 
@@ -455,14 +578,16 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     } else {
       messageDiv.innerHTML = `
-        <div class="flex-shrink-0 bg-green-100 p-2 rounded-full">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <div class="bg-green-50 rounded-lg p-3 max-w-xs md:max-w-md markdown-content">
-          <div class="text-gray-800 text-sm">${processMarkdown(message)}</div>
-          <p class="text-right text-xs text-gray-500 mt-1">${timestamp}</p>
+        <div class="flex items-start space-x-2">
+          <div class="flex-shrink-0 bg-green-100 p-2 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <div class="bg-green-50 rounded-lg p-3 max-w-xs md:max-w-md">
+            <div class="text-gray-800 text-sm">${formatMessage(message)}</div>
+            <p class="text-right text-xs text-gray-500 mt-1">${timestamp}</p>
+          </div>
         </div>
       `;
     }
@@ -470,14 +595,19 @@ document.addEventListener("DOMContentLoaded", function () {
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
-    if (sender === "bot") {
-      showQuickReplies();
+    // Add to conversation history if needed
+    if (saveToHistory) {
+      conversationHistory.push({
+        role: sender === "user" ? "user" : "assistant",
+        content: message,
+      });
+      saveConversation();
     }
   }
 
   // Update notification badge
   function updateNotificationBadge() {
-    if (unreadMessages > 0) {
+    if (unreadMessages > 0 && !chatWindow.classList.contains("active")) {
       notificationBadge.textContent = unreadMessages;
       notificationBadge.classList.remove("hidden");
     } else {
@@ -502,6 +632,7 @@ document.addEventListener("DOMContentLoaded", function () {
       try {
         await getAIResponse(message);
       } catch (error) {
+        console.error("Error:", error);
         addMessage(
           "bot",
           currentLanguage === "en"
@@ -515,6 +646,12 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  // Detect language from text
+  function detectLanguage(text) {
+    const hindiRegex = /[\u0900-\u097F]/;
+    return hindiRegex.test(text) ? "hi" : "en";
+  }
+
   // Handle Enter key press
   function handleKeyDown(e) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -523,6 +660,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Initialize chat
+  // Initialize everything
+  setupEventListeners();
   initChat();
 });

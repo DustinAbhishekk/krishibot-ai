@@ -9,6 +9,7 @@
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="./chatbot.css">
     <link
       href="https://fonts.googleapis.com/css2?family=Hind:wght@400;500;600;700&display=swap"
       rel="stylesheet"
@@ -1126,292 +1127,46 @@
     </div>
 
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", function () {
   // DOM Elements
   const chatButton = document.getElementById("chat-button");
   const chatWindow = document.getElementById("chat-window");
   const minimizeChat = document.getElementById("minimize-chat");
-  const chatForm = document.getElementById("chat-form");
-  const userInput = document.getElementById("user-input");
-  const chatMessages = document.getElementById("chat-messages");
-  const typingIndicator = document.getElementById("typing-indicator");
   const notificationBadge = document.getElementById("notification-badge");
-  const languageOptions = document.querySelectorAll(".language-option");
-  const englishTexts = document.querySelectorAll(".english-text");
-  const hindiTexts = document.querySelectorAll(".hindi-text");
-  const voiceBtn = document.getElementById("voice-btn");
-  const clearHistoryBtn = document.getElementById("clear-history-btn");
 
   // State variables
-  let currentLanguage = "en";
   let isChatOpen = false;
   let unreadMessages = 0;
-  let conversationHistory = [];
-  let isProcessing = false;
-  let currentBotMessageId = null;
 
-  // Initialize chat
-  function initChat() {
-    // Load conversation history from localStorage if available
-    const savedHistory = localStorage.getItem("conversationHistory");
-    if (savedHistory) {
-      try {
-        conversationHistory = JSON.parse(savedHistory);
-        // Replay conversation history
-        conversationHistory.forEach(msg => {
-          addMessage(msg.content, msg.role === "user" ? "user" : "bot", false);
-        });
-      } catch (e) {
-        console.error("Error loading conversation history:", e);
-      }
+  // Initialize chat state
+  function initChatState() {
+    const chatState = localStorage.getItem("chatState");
+    if (chatState === "closed") {
+      chatWindow.classList.remove("active");
+      chatButton.classList.remove("hidden");
+    } else {
+      chatWindow.classList.add("active");
+      chatButton.classList.add("hidden");
     }
-
-    // Set initial language
-    updateLanguageUI(currentLanguage);
   }
 
   // Toggle chat window
-  chatButton.addEventListener("click", function () {
-    isChatOpen = !isChatOpen;
-    if (isChatOpen) {
-      chatWindow.classList.remove("hidden");
-      chatButton.classList.add("hidden");
-      unreadMessages = 0;
-      updateNotificationBadge();
-    } else {
-      chatWindow.classList.add("hidden");
-      chatButton.classList.remove("hidden");
-    }
-  });
-
-  // Minimize chat
-  minimizeChat.addEventListener("click", function () {
-    chatWindow.classList.add("hidden");
-    chatButton.classList.remove("hidden");
-    isChatOpen = false;
-  });
-
-  // Language selection
-  languageOptions.forEach((option) => {
-    option.addEventListener("click", function () {
-      const lang = this.getAttribute("data-lang");
-      currentLanguage = lang;
-      updateLanguageUI(lang);
-    });
-  });
-
-  function updateLanguageUI(lang) {
-    // Update active state
-    languageOptions.forEach((opt) => {
-      opt.classList.toggle("active", opt.getAttribute("data-lang") === lang);
-      opt.classList.toggle("bg-white", opt.getAttribute("data-lang") === lang);
-      opt.classList.toggle("text-green-700", opt.getAttribute("data-lang") === lang);
-    });
-
-    // Toggle text visibility
-    englishTexts.forEach((text) => {
-      text.classList.toggle("hidden", lang !== "en");
-    });
-    hindiTexts.forEach((text) => {
-      text.classList.toggle("hidden", lang !== "hi");
-    });
-
-    // Update placeholder
-    userInput.placeholder =
-      lang === "en" ? "Type your message..." : "अपना संदेश टाइप करें...";
-  }
-
-  // Handle form submission
-  chatForm.addEventListener("submit", async function (e) {
-    e.preventDefault();
-    const message = userInput.value.trim();
-    
-    if (message && !isProcessing) {
-      isProcessing = true;
-      
-      // Add user message
-      addMessage(message, "user");
-      userInput.value = "";
-
-      // Show typing indicator
-      typingIndicator.classList.remove("hidden");
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-
-      try {
-        // Call your API endpoint
-        const response = await fetch('http://127.0.0.1:5000/api/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            message: message,
-            language: currentLanguage,
-            history: conversationHistory
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        // Handle streaming response
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let fullResponse = '';
-        currentBotMessageId = 'msg-' + Date.now();
-
-        // Create initial bot message container
-        const botMessageDiv = document.createElement("div");
-        botMessageDiv.id = currentBotMessageId;
-        botMessageDiv.className = "flex items-start space-x-2";
-        botMessageDiv.innerHTML = `
-          <div class="flex-shrink-0 bg-green-100 p-2 rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <div class="bg-green-50 rounded-lg p-3 max-w-xs md:max-w-md">
-            <p class="text-sm" id="${currentBotMessageId}-content"></p>
-          </div>
-        `;
-        chatMessages.appendChild(botMessageDiv);
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
-          
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.substring(6));
-                if (data.chunk) {
-                  fullResponse += data.chunk;
-                  document.getElementById(`${currentBotMessageId}-content`).innerHTML = 
-                    formatMessage(fullResponse);
-                  chatMessages.scrollTop = chatMessages.scrollHeight;
-                }
-              } catch (e) {
-                console.error('Error parsing SSE data:', e);
-              }
-            }
+        chatButton.addEventListener("click", function () {
+          isChatOpen = !isChatOpen;
+          if (isChatOpen) {
+            chatWindow.classList.remove("hidden");
+            unreadMessages = 0;
+            notificationBadge.classList.add("hidden");
+          } else {
+            chatWindow.classList.add("hidden");
           }
-        }
-
-        // Add to conversation history
-        conversationHistory.push({
-          role: 'assistant',
-          content: fullResponse
         });
-        saveConversation();
 
-      } catch (error) {
-        console.error('Error:', error);
-        const errorMsg = currentLanguage === "en" 
-          ? "Sorry, something went wrong. Please try again."
-          : "क्षमा करें, कुछ गलत हो गया। कृपया पुनः प्रयास करें।";
-        addMessage(errorMsg, "bot");
-      } finally {
-        typingIndicator.classList.add("hidden");
-        isProcessing = false;
-        currentBotMessageId = null;
-        
-        // Show notification if chat is closed
-        if (!isChatOpen) {
-          unreadMessages++;
-          updateNotificationBadge();
-        }
-      }
-    }
-  });
-
-  // Format message with markdown support
-  function formatMessage(text) {
-    // Simple markdown processing
-    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    text = text.replace(/## (.*?)(\n|$)/g, '<h3 class="font-semibold mt-2">$1</h3>');
-    text = text.replace(/- (.*?)(\n|$)/g, '<li class="ml-4">$1</li>');
-    text = text.replace(/(<li.*?<\/li>)+/g, '<ul class="list-disc pl-5">$&</ul>');
-    text = text.replace(/\n/g, '<br>');
-    return text;
-  }
-
-  // Add a message to the chat
-  function addMessage(text, sender, saveToHistory = true) {
-    const messageDiv = document.createElement("div");
-    messageDiv.className = `flex items-start space-x-2 ${sender === "user" ? "justify-end" : ""}`;
-
-    if (sender === "user") {
-      messageDiv.innerHTML = `
-        <div class="flex items-end space-x-2">
-          <div class="bg-blue-100 text-blue-800 rounded-lg p-3 max-w-xs md:max-w-md">
-            <p class="text-sm">${text}</p>
-          </div>
-          <div class="flex-shrink-0 bg-blue-600 p-2 rounded-full text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-        </div>
-      `;
-    } else {
-      messageDiv.innerHTML = `
-        <div class="flex items-start space-x-2">
-          <div class="flex-shrink-0 bg-green-100 p-2 rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <div class="bg-green-50 rounded-lg p-3 max-w-xs md:max-w-md">
-            <p class="text-sm">${formatMessage(text)}</p>
-          </div>
-        </div>
-      `;
-    }
-
-    chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    // Add to conversation history if needed
-    if (saveToHistory) {
-      conversationHistory.push({
-        role: sender === 'user' ? 'user' : 'assistant',
-        content: text
-      });
-      saveConversation();
-    }
-  }
-
-  // Save conversation to localStorage
-  function saveConversation() {
-    try {
-      localStorage.setItem("conversationHistory", JSON.stringify(conversationHistory));
-    } catch (e) {
-      console.error("Error saving conversation history:", e);
-    }
-  }
-
-  // Clear conversation history
-  clearHistoryBtn.addEventListener("click", function() {
-    if (confirm(currentLanguage === "en" 
-        ? "Are you sure you want to clear the chat history?" 
-        : "क्या आप वाकई चैट इतिहास साफ करना चाहते हैं?")) {
-      conversationHistory = [];
-      chatMessages.innerHTML = "";
-      localStorage.removeItem("conversationHistory");
-      
-      // Add welcome message
-      const welcomeMessage = currentLanguage === "en"
-        ? "Hello! I'm KrishiBot, your smart farming assistant. How can I help you today?"
-        : "नमस्ते! मैं कृषि बॉट हूँ, आपका स्मार्ट कृषि सहायक। मैं आपकी कैसे मदद कर सकता हूँ?";
-      
-      addMessage(welcomeMessage, "bot");
-    }
-  });
+        // Minimize chat
+        minimizeChat.addEventListener("click", function () {
+          chatWindow.classList.add("hidden");
+          isChatOpen = false;
+        });
 
   // Update notification badge
   function updateNotificationBadge() {
@@ -1423,18 +1178,21 @@
     }
   }
 
-  // Voice button (placeholder)
-  voiceBtn.addEventListener("click", function() {
-    const message = currentLanguage === "en"
-      ? "Voice input is not implemented in this demo"
-      : "वॉइस इनपुट इस डेमो में लागू नहीं किया गया है";
-    addMessage(message, "bot");
+  // Event listeners
+  chatButton.addEventListener("click", function(e) {
+    e.preventDefault();
+    toggleChat();
   });
 
-  // Initialize the chat
-  initChat();
+  minimizeChat.addEventListener("click", function(e) {
+    e.preventDefault();
+    minimizeChat();
+  });
+
+  // Initialize
+  initChatState();
 });
-    </script>
+</script>
     <script src="./chatbot.js"></script>
     <!-- <script src="./script.js"></script> -->
   </body>
